@@ -111,12 +111,12 @@ Resources:
                 - echo "Logging in to Amazon ECR..."
                 - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
                 - |
-                  if [ "$ECR_REPO1" -eq 1 ]
+                  if [ -z ${ECR_REPO1+x} ]
                   then
                     ECR_REPOSITORY_URI1=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO1
                   fi
                 - |
-                  if [ "$ECR_REPO2" -eq 1 ]
+                  if [ -z ${ECR_REPO2+x} ]
                   then
                     ECR_REPOSITORY_URI2=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO2
                   fi
@@ -130,13 +130,13 @@ Resources:
                 - echo Phase BUILD was STARTED on `date`
                 - echo "Building the Docker image..."
                 - |
-                  if [ "$ECR_REPO1" -eq 1 ]
+                  if [ -z ${ECR_REPO1+x} ]
                   then
                     cd service1 && docker build -t $ECR_REPOSITORY_URI1:latest .
                     docker tag $ECR_REPOSITORY_URI1:latest $ECR_REPOSITORY_URI1:$IMAGE_TAG
                   fi
                 - |
-                  if [ "$ECR_REPO2" -eq 1 ]
+                  if [ -z ${ECR_REPO2+x} ]
                   then
                     cd service2 && docker build -t $ECR_REPOSITORY_URI2:latest .
                     docker tag $ECR_REPOSITORY_URI2:latest $ECR_REPOSITORY_URI2:$IMAGE_TAG
