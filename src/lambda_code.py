@@ -112,12 +112,11 @@ def lambda_handler(event, context):
     # and set flag for build triggering
     doTriggerBuild = False
     services_dic = {
-        'service1/DockerFile':ECR_REPO_NAME1,
-        'service2/DockerFile':ECR_REPO_NAME2
+        'service1/Dockerfile':'ECR_REPO_NAME1',
+        'service2/Dockerfile':'ECR_REPO_NAME2'
         }
     services = []
     for diff in differences:
-        print(diff['afterBlob']['path'])
         root, extension = os.path.splitext(str(diff['afterBlob']['path']))
         fileName = os.path.basename(str(diff['afterBlob']['path']))
         if ((extension in file_extension_allowed) or (fileName in fileNames_allowed)):
@@ -148,6 +147,7 @@ def lambda_handler(event, context):
                         'type': 'PLAINTEXT'
                         })
 
+    print(env_vars)
     # Trigger codebuild job to build the repository if needed
     if doTriggerBuild:
         build = {
