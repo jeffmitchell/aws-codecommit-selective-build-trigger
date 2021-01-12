@@ -111,9 +111,9 @@ def lambda_handler(event, context):
     # Check whether specific file or specific extension file is added/modified
     # and set flag for build triggering
     doTriggerBuild = False
-    services_dic = {
-        'service1/Dockerfile':'ECR_REPO_NAME1',
-        'service2/Dockerfile':'ECR_REPO_NAME2'
+    services_dict = {
+        'service1/Dockerfile': {'env_name': 'ECR_REPO1', 'env_value': ECR_REPO_NAME1},
+        'service2/Dockerfile': {'env_name': 'ECR_REPO2', 'env_value': ECR_REPO_NAME2}
         }
     services = []
     for diff in differences:
@@ -133,19 +133,15 @@ def lambda_handler(event, context):
                 'value': account_id,
                 'type': 'PLAINTEXT'
                 }]
-    for service in services:
-        if services_dic[service] == 'ECR_REPO_NAME1':
-            env_vars.append({
-                        'name': 'ECR_REPO1',
-                        'value': ECR_REPO_NAME1,
-                        'type': 'PLAINTEXT'
-                        })
-        elif services_dic[service] == 'ECR_REPO_NAME2':
-            env_vars.append({
-                        'name': 'ECR_REPO2',
-                        'value': ECR_REPO_NAME2,
-                        'type': 'PLAINTEXT'
-                        })
+    for key in services_dict:
+        env_value = 'no_val'
+        if key in services:
+            env_value = services_dict[key]['env_value']
+        env_vars.append({
+                    'name': services_dict[key]['env_name'],
+                    'value': env_value,
+                    'type': 'PLAINTEXT'
+                    })
 
     print(env_vars)
     # Trigger codebuild job to build the repository if needed

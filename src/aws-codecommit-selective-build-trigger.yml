@@ -111,12 +111,12 @@ Resources:
                 - echo "Logging in to Amazon ECR..."
                 - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
                 - |
-                  if [ -z ${ECR_REPO1+x} ]
+                  if [ "$ECR_REPO1" != "no_val" ]
                   then
                     ECR_REPOSITORY_URI1=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO1
                   fi
                 - |
-                  if [ -z ${ECR_REPO2+x} ]
+                  if [ "$ECR_REPO2" != "no_val" ]
                   then
                     ECR_REPOSITORY_URI2=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO2
                   fi
@@ -130,15 +130,15 @@ Resources:
                 - echo Phase BUILD was STARTED on `date`
                 - echo "Building the Docker image..."
                 - |
-                  if [ -z ${ECR_REPO1+x} ]
+                  if [ "$ECR_REPO1" != "no_val" ]
                   then
                     cd service1 && docker build -t $ECR_REPOSITORY_URI1:latest .
                     docker tag $ECR_REPOSITORY_URI1:latest $ECR_REPOSITORY_URI1:$IMAGE_TAG
                   fi
                 - |
-                  if [ -z ${ECR_REPO2+x} ]
+                  if [ "$ECR_REPO2" != "no_val" ]
                   then
-                    cd service2 && docker build -t $ECR_REPOSITORY_URI2:latest .
+                    cd ../service2 && docker build -t $ECR_REPOSITORY_URI2:latest .
                     docker tag $ECR_REPOSITORY_URI2:latest $ECR_REPOSITORY_URI2:$IMAGE_TAG
                   fi
               finally:
@@ -148,10 +148,18 @@ Resources:
               commands:
                 - echo Phase POST_BUILD was STARTED on `date`
                 - echo "Pushing the Docker image to ECR..."
-                - docker push $ECR_REPOSITORY_URI1:latest
-                - docker push $ECR_REPOSITORY_URI1:$IMAGE_TAG
-                - docker push $ECR_REPOSITORY_URI2:latest
-                - docker push $ECR_REPOSITORY_URI2:$IMAGE_TAG
+                - |
+                  if [ "$ECR_REPO1" != "no_val" ]
+                  then
+                    docker push $ECR_REPOSITORY_URI1:latest
+                    docker push $ECR_REPOSITORY_URI1:$IMAGE_TAG
+                  fi
+                - |
+                  if [ "$ECR_REPO2" != "no_val" ]
+                  then
+                    docker push $ECR_REPOSITORY_URI2:latest
+                    docker push $ECR_REPOSITORY_URI2:$IMAGE_TAG
+                  fi
               finally:
                 - echo Phase POST_BUILD was COMPLETED on `date`
                 - if [ "$CODEBUILD_BUILD_SUCCEEDING" -eq 1 ]; then echo 'IMAGE POST BUILD SUCCESSFUL'; else echo 'IMAGE POST BUILD FAILED'; exit 1; fi
