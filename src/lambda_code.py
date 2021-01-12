@@ -1,4 +1,4 @@
-""" 
+"""
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: MIT-0
 
@@ -13,17 +13,17 @@ INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
 PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import os
-
 import boto3
 from botocore.exceptions import ClientError
 
 # Module level variables initialization
 CODE_BUILD_PROJECT = os.getenv('CODE_BUILD_PROJECT')
-ECR_REPO_NAME = os.getenv('ECR_REPO_NAME')
+ECR_REPO_NAME1 = os.getenv('ECR_REPO_NAME1')
+ECR_REPO_NAME2 = os.getenv('ECR_REPO_NAME2')
 
 codecommit = boto3.client('codecommit')
 cb = boto3.client('codebuild')
@@ -111,11 +111,43 @@ def lambda_handler(event, context):
     # Check whether specific file or specific extension file is added/modified
     # and set flag for build triggering
     doTriggerBuild = False
+    services_dic = {
+        'service1/DockerFile':ECR_REPO_NAME1,
+        'service2/DockerFile':ECR_REPO_NAME2
+        }
+    services = []
     for diff in differences:
+        print(diff['afterBlob']['path'])
         root, extension = os.path.splitext(str(diff['afterBlob']['path']))
         fileName = os.path.basename(str(diff['afterBlob']['path']))
         if ((extension in file_extension_allowed) or (fileName in fileNames_allowed)):
+            services.append(diff['afterBlob']['path'])
             doTriggerBuild = True
+
+    env_vars = [{
+                'name': 'AWS_DEFAULT_REGION',
+                'value': region,
+                'type': 'PLAINTEXT'
+                },
+                {
+                'name': 'AWS_ACCOUNT_ID',
+                'value': account_id,
+                'type': 'PLAINTEXT'
+                }]
+    for service in services:
+        ECR_REPO_NAME = ''
+        if services_dic[service] == 'ECR_REPO_NAME1':
+            env_vars.append({
+                        'name': 'ECR_REPO1',
+                        'value': ECR_REPO_NAME1,
+                        'type': 'PLAINTEXT'
+                        })
+        elif services_dic[service] == 'ECR_REPO_NAME2':
+            env_vars.append({
+                        'name': 'ECR_REPO2',
+                        'value': ECR_REPO_NAME2,
+                        'type': 'PLAINTEXT'
+                        })
 
     # Trigger codebuild job to build the repository if needed
     if doTriggerBuild:
@@ -124,23 +156,7 @@ def lambda_handler(event, context):
             'sourceVersion': commit_hash,
             'sourceTypeOverride': 'CODECOMMIT',
             'sourceLocationOverride': 'https://git-codecommit.%s.amazonaws.com/v1/repos/%s' % (region, repo_name),
-            'environmentVariablesOverride': [
-                {
-                    'name': 'AWS_DEFAULT_REGION',
-                    'value': region,
-                    'type': 'PLAINTEXT'
-                },
-                {
-                    'name': 'ECR_REPO',
-                    'value': ECR_REPO_NAME,
-                    'type': 'PLAINTEXT'
-                },
-                {
-                    'name': 'AWS_ACCOUNT_ID',
-                    'value': account_id,
-                    'type': 'PLAINTEXT'
-                }
-            ]
+            'environmentVariablesOverride': env_vars
         }
 
         print("Building docker image from repo %s in region %s" %

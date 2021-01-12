@@ -1,4 +1,3 @@
----
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
@@ -15,19 +14,21 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: AWS CloudFormation Template to build a docker image build factory.
 Parameters:
   ProjectName:
-    AllowedPattern: '[a-z0-9.-]*'
-    ConstraintDescription: Project Name must contain only lowercase a-z, 0-9 and -
+    AllowedPattern: "[a-z0-9.-]*"
+    ConstraintDescription:
+      Project Name must contain only lowercase a-z, 0-9 and -
       characters.
-    Default: sampletest
-    Description: Define the Name of the Project such as test/data etc. (Value must
+    Default: hshahin-codebuild
+    Description:
+      Define the Name of the Project such as test/data etc. (Value must
       be comprised only of lowercase a-z, 0-9, .-)
     Type: String
   LambdaZipS3Bucket:
-    Default: codecommit-selective-build
+    Default: hshahin-codecommit-selective-build
     Description: Define the Name of the S3 Bucket containing Lambda code zip
     Type: String
   LambdaZipS3Key:
@@ -40,14 +41,14 @@ Resources:
     Properties:
       RepositoryDescription: !Sub ${ProjectName}CodeRepo
       RepositoryName: !Sub ${ProjectName}coderepo
-      Triggers: 
+      Triggers:
         - Name: MasterTrigger
           CustomData: Project ID sampletest
-          DestinationArn: !GetAtt  LambdaTrigger.Arn
+          DestinationArn: !GetAtt LambdaTrigger.Arn
           Branches:
-          - master
+            - master
           Events:
-          - updateReference
+            - updateReference
   CodeBuildImageRole:
     Type: AWS::IAM::Role
     Properties:
@@ -58,7 +59,7 @@ Resources:
             Principal:
               Service:
                 - codebuild.amazonaws.com
-        Version: '2012-10-17'
+        Version: "2012-10-17"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSCodeCommitReadOnly
         - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
@@ -75,8 +76,8 @@ Resources:
                   - logs:PutLogEvents
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
-            Version: '2012-10-17'
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+            Version: "2012-10-17"
           PolicyName: !Sub
             - ${Param1}-RolePolicy
             - Param1: !Sub ${ProjectName}-CodeBuild-ContainerImage
@@ -95,7 +96,7 @@ Resources:
         Image: aws/codebuild/docker:18.09.0-1.7.0
         PrivilegedMode: true
         Type: LINUX_CONTAINER
-      Name: !Sub '${ProjectName}-CodeBuild-Job'
+      Name: !Sub "${ProjectName}-CodeBuild-Job"
       ServiceRole: !Sub ${ProjectName}-CodeBuild-Role
       Source:
         BuildSpec: |
@@ -109,7 +110,16 @@ Resources:
                 - echo "Cleaning up un-needed files..." && rm -fr .git .gitignore readme.md README.md Readme.md ReadMe.md || exit 0 && echo "Cleanup Completed!"
                 - echo "Logging in to Amazon ECR..."
                 - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
-                - ECR_REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO
+                - |
+                  if [ "$ECR_REPO1" -eq 1 ]
+                  then
+                    ECR_REPOSITORY_URI1=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO1
+                  fi
+                - |
+                  if [ "$ECR_REPO2" -eq 1 ]
+                  then
+                    ECR_REPOSITORY_URI2=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO2
+                  fi
                 - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
                 - IMAGE_TAG=${COMMIT_HASH:=latest}
               finally:
@@ -119,8 +129,18 @@ Resources:
               commands:
                 - echo Phase BUILD was STARTED on `date`
                 - echo "Building the Docker image..."
-                - docker build -t $ECR_REPOSITORY_URI:latest .
-                - docker tag $ECR_REPOSITORY_URI:latest $ECR_REPOSITORY_URI:$IMAGE_TAG
+                - |
+                  if [ "$ECR_REPO1" -eq 1 ]
+                  then
+                    cd service1 && docker build -t $ECR_REPOSITORY_URI1:latest .
+                    docker tag $ECR_REPOSITORY_URI1:latest $ECR_REPOSITORY_URI1:$IMAGE_TAG
+                  fi
+                - |
+                  if [ "$ECR_REPO2" -eq 1 ]
+                  then
+                    cd service2 && docker build -t $ECR_REPOSITORY_URI2:latest .
+                    docker tag $ECR_REPOSITORY_URI2:latest $ECR_REPOSITORY_URI2:$IMAGE_TAG
+                  fi
               finally:
                 - echo Phase BUILD was COMPLETED on `date`
                 - if [ "$CODEBUILD_BUILD_SUCCEEDING" -eq 1 ]; then echo 'IMAGE BUILD SUCCESSFUL'; else echo 'IMAGE BUILD FAILED'; exit 1; fi
@@ -128,25 +148,28 @@ Resources:
               commands:
                 - echo Phase POST_BUILD was STARTED on `date`
                 - echo "Pushing the Docker image to ECR..."
-                - docker push $ECR_REPOSITORY_URI:latest
-                - docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+                - docker push $ECR_REPOSITORY_URI1:latest
+                - docker push $ECR_REPOSITORY_URI1:$IMAGE_TAG
+                - docker push $ECR_REPOSITORY_URI2:latest
+                - docker push $ECR_REPOSITORY_URI2:$IMAGE_TAG
               finally:
                 - echo Phase POST_BUILD was COMPLETED on `date`
                 - if [ "$CODEBUILD_BUILD_SUCCEEDING" -eq 1 ]; then echo 'IMAGE POST BUILD SUCCESSFUL'; else echo 'IMAGE POST BUILD FAILED'; exit 1; fi
         Type: NO_SOURCE
       Tags:
         - Key: Project
-          Value: !Ref 'ProjectName'
+          Value: !Ref "ProjectName"
   LambdaTrigger:
     Type: AWS::Lambda::Function
     DependsOn: LambdaTriggerRole
     Properties:
       Code:
-        S3Bucket: !Ref 'LambdaZipS3Bucket'
-        S3Key: !Ref 'LambdaZipS3Key'
-      Description: Lambda function that will recieve CodeCommit events and will trigger
+        S3Bucket: !Ref "LambdaZipS3Bucket"
+        S3Key: !Ref "LambdaZipS3Key"
+      Description:
+        Lambda function that will recieve CodeCommit events and will trigger
         CodeBuild docker image build job.
-      FunctionName: !Sub '${CodeBuildImageJob}-Lambda-Trigger'
+      FunctionName: !Sub "${CodeBuildImageJob}-Lambda-Trigger"
       Handler: lambda_code.lambda_handler
       MemorySize: 512
       Role: !Sub
@@ -155,12 +178,13 @@ Resources:
       Runtime: python3.6
       Tags:
         - Key: Project
-          Value: !Ref 'ProjectName'
+          Value: !Ref "ProjectName"
       Timeout: 300
       Environment:
         Variables:
           CODE_BUILD_PROJECT: !Ref CodeBuildImageJob
-          ECR_REPO_NAME: !Ref ECRRepository
+          ECR_REPO_NAME1: !Ref ECRRepository1
+          ECR_REPO_NAME2: !Ref ECRRepository2
   LambdaTriggerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -171,7 +195,7 @@ Resources:
             Principal:
               Service:
                 - lambda.amazonaws.com
-        Version: '2012-10-17'
+        Version: "2012-10-17"
       Path: /
       Policies:
         - PolicyDocument:
@@ -184,7 +208,7 @@ Resources:
                   - logs:PutLogEvents
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
                 Sid: LogAccessPolicy
               - Action:
                   - codecommit:GetTree
@@ -197,7 +221,7 @@ Resources:
                   - codecommit:BatchGetCommits
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${ProjectName}coderepo'
+                  - !Sub "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${ProjectName}coderepo"
                 Sid: CodeCommitRead
               - Action:
                   - codebuild:StartBuild
@@ -205,7 +229,7 @@ Resources:
                 Resource:
                   - !GetAtt CodeBuildImageJob.Arn
                 Sid: CodeBuildStartPolicy
-            Version: '2012-10-17'
+            Version: "2012-10-17"
           PolicyName: !Sub
             - ${Param1}-RolePolicy
             - Param1: !Sub ${ProjectName}-Lambda-CodeBuild-Trigger
@@ -214,9 +238,13 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref 'LambdaTrigger'
+      FunctionName: !Ref "LambdaTrigger"
       Principal: codecommit.amazonaws.com
-  ECRRepository:
-      Type: AWS::ECR::Repository
-      Properties:
-        RepositoryName: !Sub ${ProjectName}-imagerepo
+  ECRRepository1:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-imagerepo1
+  ECRRepository2:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-imagerepo2

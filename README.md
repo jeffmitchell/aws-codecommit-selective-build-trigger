@@ -28,7 +28,15 @@ First, zip and upload the lambda code to an S3 bucket
 
 Trigger the cloudformation stack creation pointing to that S3 bucket zip.
 
-`aws cloudformation create-stack --stack-name myteststack --template-body file://src/aws-codecommit-selective-build-trigger.yml --parameters ParameterKey=ProjectName,ParameterValue=testproject ParameterKey=LambdaZipS3Bucket,ParameterValue=aws-codecommit-selective-build-trigger ParameterKey=LambdaZipS3Key,ParameterValue=lambda.zip --capabilities CAPABILITY_NAMED_IAM`
+`aws cloudformation create-stack
+--stack-name myteststack
+--template-body file://src/aws-codecommit-selective-build-trigger.yml
+--parameters ParameterKey=ProjectName,
+             ParameterValue=testproject,
+             ParameterKey=LambdaZipS3Bucket,
+             ParameterValue=aws-codecommit-selective-build-trigger,ParameterKey=LambdaZipS3Key,
+             ParameterValue=lambda.zip
+--capabilities CAPABILITY_NAMED_IAM`
 
 ## Components details
 
@@ -41,4 +49,3 @@ Trigger the cloudformation stack creation pointing to that S3 bucket zip.
 # License
 
 This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
-
