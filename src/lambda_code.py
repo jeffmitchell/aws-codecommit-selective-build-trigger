@@ -135,7 +135,6 @@ def lambda_handler(event, context):
                 'type': 'PLAINTEXT'
                 }]
     for service in services:
-        ECR_REPO_NAME = ''
         if services_dic[service] == 'ECR_REPO_NAME1':
             env_vars.append({
                         'name': 'ECR_REPO1',
