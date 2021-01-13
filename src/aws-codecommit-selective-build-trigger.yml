@@ -22,13 +22,13 @@ Parameters:
     ConstraintDescription:
       Project Name must contain only lowercase a-z, 0-9 and -
       characters.
-    Default: hshahin-codebuild
+    Default: jmitch-niscp-cicd
     Description:
       Define the Name of the Project such as test/data etc. (Value must
       be comprised only of lowercase a-z, 0-9, .-)
     Type: String
   LambdaZipS3Bucket:
-    Default: hshahin-codecommit-selective-build
+    Default: jmitch-niscp
     Description: Define the Name of the S3 Bucket containing Lambda code zip
     Type: String
   LambdaZipS3Key:
@@ -129,6 +129,7 @@ Resources:
               commands:
                 - echo Phase BUILD was STARTED on `date`
                 - echo "Building the Docker image..."
+                - docker pull public.ecr.aws/shuttl/alpine:3.12.3 copied
                 - |
                   if [ "$ECR_REPO1" != "no_val" ]
                   then
