@@ -105,7 +105,7 @@ Resources:
             install:
               commands:
                 - echo Phase INSTALL was STARTED on `date`
-                - echo "Installing Pre-Requisites..."
+                - echo "Installing Pre-Requisites...."
                 - python3 -m pip install pip --upgrade || exit 1
                 - echo "Cleaning up un-needed files..." && rm -fr .git .gitignore readme.md README.md Readme.md ReadMe.md || exit 0 && echo "Cleanup Completed!"
                 - echo "Logging in to Amazon ECR..."
@@ -129,7 +129,7 @@ Resources:
               commands:
                 - echo Phase BUILD was STARTED on `date`
                 - echo "Building the Docker image..."
-                - docker pull public.ecr.aws/shuttl/alpine:3.12.3 copied
+                - docker image pull public.ecr.aws/shuttl/alpine:latest
                 - |
                   if [ "$ECR_REPO1" != "no_val" ]
                   then
